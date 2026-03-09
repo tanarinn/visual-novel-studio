@@ -10,6 +10,7 @@ export function exportToHTML(project, readerSettings = {}) {
     fontFamily = 'serif',
     colorTheme = 'light',
     textWidth = 680,
+    noIndent = false,
   } = readerSettings
 
   const themes = {
@@ -38,7 +39,7 @@ export function exportToHTML(project, readerSettings = {}) {
       <div class="scene-content">
         <h2 class="scene-title">${escapeHtml(scene.title)}</h2>
         ${scene.location || scene.timeOfDay ? `<p class="scene-meta">${[scene.location, scene.timeOfDay].filter(Boolean).map(escapeHtml).join(' · ')}</p>` : ''}
-        <div class="scene-text">${markdownToHtml(scene.content)}</div>
+        <div class="scene-text">${markdownToHtml(scene.content, noIndent)}</div>
       </div>
     </section>`
     )
@@ -187,10 +188,33 @@ export function exportToHTML(project, readerSettings = {}) {
 
     .scene-text p {
       margin: 0 0 1.2em;
-      text-indent: 1em;
+      text-indent: ${noIndent ? '0' : '1em'};
     }
 
     .scene-text p:first-child { margin-top: 0; }
+
+    .scene-text blockquote {
+      border-left: 3px solid rgba(128,128,128,0.4);
+      padding-left: 1em;
+      margin: 0 0 1.2em 0;
+      opacity: 0.85;
+    }
+
+    .scene-text blockquote p {
+      font-style: italic;
+      margin: 0.4em 0 0;
+      text-indent: 0;
+    }
+
+    .scene-text blockquote p:first-child { margin-top: 0; }
+
+    .scene-text code {
+      font-family: monospace;
+      background: rgba(0,0,0,0.07);
+      padding: 0 4px;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
 
     /* Progress bar */
     .progress {
@@ -261,23 +285,60 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
 }
 
-function markdownToHtml(text) {
+// Convert inline markdown to HTML (escaping plain text segments)
+function inlineToHtml(text) {
   if (!text) return ''
-  // Basic markdown to HTML conversion for the exported file
-  let html = text
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Line breaks
-    .replace(/\n/g, '<br>')
+  const regex = /\*\*(.+?)\*\*|\*(.+?)\*|~~(.+?)~~|`(.+?)`/g
+  let result = ''
+  let lastIndex = 0
+  let match
+  while ((match = regex.exec(text)) !== null) {
+    result += escapeHtml(text.slice(lastIndex, match.index))
+    if (match[1] !== undefined) result += `<strong>${escapeHtml(match[1])}</strong>`
+    else if (match[2] !== undefined) result += `<em>${escapeHtml(match[2])}</em>`
+    else if (match[3] !== undefined) result += `<s>${escapeHtml(match[3])}</s>`
+    else if (match[4] !== undefined) result += `<code>${escapeHtml(match[4])}</code>`
+    lastIndex = match.index + match[0].length
+  }
+  result += escapeHtml(text.slice(lastIndex))
+  return result
+}
 
-  // Wrap in paragraphs
-  return html
-    .split(/(<br>){2,}/)
-    .filter((s) => s && s !== '<br>')
-    .map((p) => `<p>${p.replace(/^(<br>)+|(<br>)+$/g, '')}</p>`)
-    .join('\n')
+// Convert full markdown text to HTML, supporting:
+// - Paragraphs (blank line separated)
+// - Single-line breaks preserved within paragraphs
+// - > Blockquotes
+// - **bold**, *italic*, ~~strike~~, `code`
+function markdownToHtml(text, noIndent = false) {
+  if (!text) return ''
+  const indentStyle = noIndent ? '' : ' style="text-indent:1em"'
+  const blocks = text.split(/\n{2,}/).filter(Boolean).map(b => b.trimEnd())
+
+  return blocks.map(block => {
+    const lines = block.split('\n').map(l => l.replace(/\s+$/, ''))
+    const nonEmpty = lines.filter(l => l.trim())
+
+    // Blockquote: all non-empty lines start with >
+    if (nonEmpty.length > 0 && nonEmpty.every(l => l.startsWith('>'))) {
+      const inner = nonEmpty.map((l, j) => {
+        const txt = l.replace(/^>\s?/, '')
+        return `<p style="margin:${j > 0 ? '0.4em' : '0'} 0 0;font-style:italic;text-indent:0">${inlineToHtml(txt)}</p>`
+      }).join('\n')
+      return `<blockquote>${inner}</blockquote>`
+    }
+
+    // Regular paragraph: lines joined with <br>
+    let first = true
+    const content = lines.map(line => {
+      if (!line.trim()) return ''
+      const html = inlineToHtml(line)
+      const result = first ? html : `<br>${html}`
+      first = false
+      return result
+    }).join('')
+
+    return `<p${indentStyle}>${content}</p>`
+  }).join('\n')
 }
 
 export function downloadHTML(html, filename = 'visual-novel.html') {

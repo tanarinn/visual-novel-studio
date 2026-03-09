@@ -22,6 +22,11 @@ export const TEXT_PROVIDERS = {
     baseUrl: 'https://api.groq.com/openai/v1',
     models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
   },
+  ollama: {
+    name: 'Ollama（ローカル）',
+    baseUrl: 'http://localhost:11434/v1',
+    models: ['llama3.2', 'llama3.1', 'llama3', 'mistral', 'gemma2', 'phi3.5', 'qwen2.5', 'deepseek-r1'],
+  },
   custom: {
     name: 'OpenAI互換（カスタム）',
     baseUrl: '',

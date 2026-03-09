@@ -100,6 +100,8 @@ export default function Settings() {
       provider,
       baseUrl: config.baseUrl || textApi.baseUrl,
       model: config.models[0] || textApi.model,
+      // Ollama doesn't need a real API key; use placeholder so apiKey is truthy
+      ...(provider === 'ollama' ? { apiKey: 'ollama' } : {}),
     })
   }
 
@@ -185,20 +187,28 @@ export default function Settings() {
             placeholder="https://api.openai.com/v1"
           />
         </FormRow>
-        <FormRow label="APIキー">
-          <Input
-            type="password"
-            value={textApi.apiKey}
-            onChange={(v) => setTextApi({ apiKey: v })}
-            placeholder="sk-..."
-          />
-        </FormRow>
+        {textApi.provider === 'ollama' ? (
+          <FormRow label="APIキー">
+            <div style={{ fontSize: '0.85em', color: '#16a34a', background: '#f0fdf4', padding: '10px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+              ✅ Ollamaはローカル実行のためAPIキーは不要です
+            </div>
+          </FormRow>
+        ) : (
+          <FormRow label="APIキー">
+            <Input
+              type="password"
+              value={textApi.apiKey}
+              onChange={(v) => setTextApi({ apiKey: v })}
+              placeholder="sk-..."
+            />
+          </FormRow>
+        )}
         <FormRow label="モデル">
-          {textApi.provider === 'custom' || textModelOptions.length === 0 ? (
+          {textApi.provider === 'custom' || textApi.provider === 'ollama' || textModelOptions.length === 0 ? (
             <Input
               value={textApi.model}
               onChange={(v) => setTextApi({ model: v })}
-              placeholder="モデル名を入力"
+              placeholder={textApi.provider === 'ollama' ? 'llama3.2, mistral, gemma2...' : 'モデル名を入力'}
             />
           ) : (
             <Select
@@ -208,9 +218,17 @@ export default function Settings() {
             />
           )}
         </FormRow>
+        {textApi.provider === 'ollama' && (
+          <div style={{ fontSize: '0.82em', color: '#92400e', background: '#fffbeb', border: '1px solid #fef08a', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', lineHeight: '1.6' }}>
+            💡 <strong>CORS設定が必要です。</strong>以下のコマンドでOllamaを起動してください：<br />
+            <code style={{ display: 'inline-block', marginTop: '4px', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '0.95em' }}>
+              OLLAMA_ORIGINS=* ollama serve
+            </code>
+          </div>
+        )}
         <button
           onClick={handleTestText}
-          disabled={testingText || !textApi.apiKey}
+          disabled={testingText || (!textApi.apiKey && textApi.provider !== 'ollama')}
           style={{
             padding: '8px 20px',
             background: '#6366f1',

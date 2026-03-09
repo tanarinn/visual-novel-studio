@@ -38,35 +38,46 @@ Analyze this scene and respond with JSON in this exact format:
 export async function analyzeScene(scene, textApiSettings) {
   const { provider, baseUrl, apiKey, model } = textApiSettings
 
-  if (!apiKey) throw new Error('APIキーが設定されていません')
+  if (!apiKey && provider !== 'ollama') throw new Error('APIキーが設定されていません')
 
   const userContent = ANALYSIS_USER_TEMPLATE(scene.title, scene.content)
 
   if (provider === 'anthropic') {
     return analyzeWithAnthropic({ userContent, baseUrl, apiKey, model })
   } else {
-    return analyzeWithOpenAICompatible({ userContent, baseUrl, apiKey, model })
+    return analyzeWithOpenAICompatible({ userContent, baseUrl, apiKey, model, provider })
   }
 }
 
-async function analyzeWithOpenAICompatible({ userContent, baseUrl, apiKey, model }) {
+async function analyzeWithOpenAICompatible({ userContent, baseUrl, apiKey, model, provider }) {
   const url = `${baseUrl}/chat/completions`
+  const body = {
+    model,
+    messages: [
+      { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ],
+    temperature: 0.7,
+    // Ollama thinking models (Qwen3 etc.) consume many tokens for reasoning;
+    // use a larger budget so the actual JSON response is not cut off.
+    max_tokens: provider === 'ollama' ? 8192 : 1000,
+  }
+  if (provider !== 'ollama') {
+    body.response_format = { type: 'json_object' }
+  } else {
+    // Disable thinking mode for Ollama thinking models (Qwen3 etc.).
+    // Thinking is unnecessary for structured JSON tasks and wastes tokens.
+    // `think: false` is supported by Ollama v0.7+; safely ignored on older versions.
+    body.think = false
+  }
+
   const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey || 'ollama'}`,
     },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-        { role: 'user', content: userContent },
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-      response_format: { type: 'json_object' },
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -75,7 +86,9 @@ async function analyzeWithOpenAICompatible({ userContent, baseUrl, apiKey, model
   }
 
   const data = await res.json()
-  const content = data.choices?.[0]?.message?.content
+  let content = data.choices?.[0]?.message?.content ?? ''
+  // Strip <think>...</think> blocks that thinking models (Qwen3, DeepSeek-R1 etc.) prepend
+  content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   if (!content) throw new Error('APIからの応答が空です')
 
   return parseAnalysisResult(content)
@@ -158,7 +171,7 @@ Respond with JSON: {"imagePrompt": "...", "imagePromptJa": "..."}`
  */
 export async function splitScenesWithLLM(scenes, targetCount, policy, textApiSettings) {
   const { provider, baseUrl, apiKey, model } = textApiSettings
-  if (!apiKey) throw new Error('APIキーが設定されていません')
+  if (!apiKey && provider !== 'ollama') throw new Error('APIキーが設定されていません')
 
   const fullText = scenes.map((s) => s.content).join('\n\n')
   const policyDesc =
@@ -222,16 +235,18 @@ ${textToSend}`
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: provider === 'ollama' ? 8192 : 2000,
     }
     // json_object mode only for OpenAI (not all providers support it)
     if (provider === 'openai') body.response_format = { type: 'json_object' }
+    // Disable thinking mode for Ollama thinking models
+    if (provider === 'ollama') body.think = false
 
     const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey || 'ollama'}`,
       },
       body: JSON.stringify(body),
     })
@@ -240,19 +255,40 @@ ${textToSend}`
       throw new Error(err.error?.message || `API Error: ${res.status}`)
     }
     const data = await res.json()
-    content = data.choices?.[0]?.message?.content
+    content = data.choices?.[0]?.message?.content ?? ''
+    // Strip <think> blocks from thinking models
+    content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
   }
 
   if (!content) throw new Error('APIからの応答が空です')
 
   const parsed = parseAnalysisResult(content)
-  if (!parsed.scenes || !Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
+
+  // Robustly extract the scenes array — LLMs sometimes use different key names or return a bare array.
+  let rawScenes =
+    parsed.scenes ||
+    parsed.Scenes ||
+    parsed.scene_list ||
+    parsed.sceneList ||
+    parsed.result ||
+    (Array.isArray(parsed) ? parsed : null) ||
+    Object.values(parsed).find((v) => Array.isArray(v))
+
+  if (!rawScenes || !Array.isArray(rawScenes) || rawScenes.length === 0) {
     throw new Error('シーン分割の結果が不正です。別のモデルやパラメーターをお試しください。')
   }
 
+  // Normalize each scene entry: support various field name variants LLMs may use.
+  const normalizeScene = (s) => ({
+    title: s.title || s.name || s.sceneName || s.scene_name || '',
+    startsWith: s.startsWith || s.starts_with || s.start || s.beginning || s.opening || s.first || '',
+  })
+
+  const sceneDefs = rawScenes.map(normalizeScene)
+
   // Resolve each scene's start position in the FULL original text.
   // Uses progressively shorter prefixes for fuzzy matching (handles minor LLM quoting differences).
-  const splitPositions = parsed.scenes.map((s, i) => {
+  const splitPositions = sceneDefs.map((s, i) => {
     if (i === 0) return 0 // First scene always starts at the beginning
     const marker = (s.startsWith || '').trim()
     if (!marker) return -1
@@ -266,7 +302,7 @@ ${textToSend}`
   // Build result scenes by slicing the FULL original text — no content is lost.
   let counter = Date.now()
   const result = []
-  for (let i = 0; i < parsed.scenes.length; i++) {
+  for (let i = 0; i < sceneDefs.length; i++) {
     const start = splitPositions[i]
     if (start < 0) continue // Skip if boundary couldn't be found
 
@@ -277,7 +313,7 @@ ${textToSend}`
 
     result.push({
       id: `scene_llm_${counter++}_${i}`,
-      title: parsed.scenes[i].title || `シーン ${result.length + 1}`,
+      title: sceneDefs[i].title || `シーン ${result.length + 1}`,
       level: 2,
       content: fullText.slice(start, end).trim(),
       characters: [],
@@ -307,7 +343,7 @@ ${textToSend}`
  */
 export async function testTextApi(textApiSettings) {
   const { provider, baseUrl, apiKey, model } = textApiSettings
-  if (!apiKey) throw new Error('APIキーが設定されていません')
+  if (!apiKey && provider !== 'ollama') throw new Error('APIキーが設定されていません')
 
   if (provider === 'anthropic') {
     const res = await fetch(`${baseUrl}/messages`, {
@@ -334,7 +370,7 @@ export async function testTextApi(textApiSettings) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey || 'ollama'}`,
       },
       body: JSON.stringify({
         model,

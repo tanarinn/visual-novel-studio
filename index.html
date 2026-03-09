@@ -1,13 +1,95 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Novel Studio</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Novel Studio - AIで紡ぐ、新しい物語体験</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Visual Novel Studio</h1>
+            <p>Markdownから、挿絵付きのビジュアルノベルを自動生成。<br>AIと共に、あなたの想像力を形にしましょう。</p>
+            <a href="visual-novel-studio/index.html" class="btn btn-primary">アプリを起動する</a>
+        </div>
+    </section>
+
+    <div class="container">
+        <h2 class="section-title">作例（Samples）</h2>
+        <div class="samples-grid">
+            <a href="sample/Morning_of_the_Incompetent.html" class="sample-card">
+                <img src="sample/Morning_of_the_imcompetent.jpeg" alt="無能力者の朝" class="sample-image">
+                <h3>無能力者の朝</h3>
+                <p>日常の繊細な描写とAI生成による美しい挿絵が融合したサンプル作品です。</p>
+                <span class="launch-btn">作品を読む →</span>
+            </a>
+            <a href="sample/Myagent.html" class="sample-card">
+                <img src="sample/Myagent.jpeg" alt="私の代理人" class="sample-image">
+                <h3>私の代理人</h3>
+                <p>SF的な世界観をビジュアルノベル形式で展開。AIによる一貫性のあるビジュアル生成の好例です。</p>
+                <span class="launch-btn">作品を読む →</span>
+            </a>
+        </div>
+
+        <section style="margin-bottom: 5rem; text-align: center;">
+            <h2 class="section-title" style="margin-top: 2rem;">主な特徴</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+                <div
+                    style="background: var(--glass); padding: 2rem; border-radius: 1rem; border: 1px solid var(--glass-border);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">✍️</div>
+                    <h4 style="margin-bottom: 1rem;">MDシーン解析</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        Markdownファイルをアップロードするだけで、AIがシーンを自動解析し、最適な挿絵を提案します。</p>
+                </div>
+                <div
+                    style="background: var(--glass); padding: 2rem; border-radius: 1rem; border: 1px solid var(--glass-border);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🎨</div>
+                    <h4 style="margin-bottom: 1rem;">AI画像生成</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        DALL·EやOllamaを活用し、物語の情景に合わせた高品質な画像をその場で生成します。</p>
+                </div>
+                <div
+                    style="background: var(--glass); padding: 2rem; border-radius: 1rem; border: 1px solid var(--glass-border);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">📱</div>
+                    <h4 style="margin-bottom: 1rem;">マルチデバイス対応</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">PCでのリッチな閲覧体験から、スマホでの快適な読書まで、自動でレイアウトを最適化します。
+                    </p>
+                </div>
+                <!-- 新規追加機能 -->
+                <div
+                    style="background: var(--glass); padding: 2rem; border-radius: 1rem; border: 1px solid var(--glass-border);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">📝</div>
+                    <h4 style="margin-bottom: 1rem;">シーン編集</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">AIの解析結果を自由にカスタマイズ。プロンプトやテキストを細かく調整できます。</p>
+                </div>
+                <div
+                    style="background: var(--glass); padding: 2rem; border-radius: 1rem; border: 1px solid var(--glass-border);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">👁️</div>
+                    <h4 style="margin-bottom: 1rem;">ノベルをプレビュー</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">生成した挿絵とテキストをその場で確認。実際の読者と同じ目線で見栄えをチェック。</p>
+                </div>
+                <div
+                    style="background: var(--glass); padding: 2rem; border-radius: 1rem; border: 1px solid var(--glass-border);">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">📦</div>
+                    <h4 style="margin-bottom: 1rem;">HTML形式で出力</h4>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">画像もすべて埋め込まれた単一のHTMLファイルとしてエクスポート。配布や共有も簡単です。
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer style="padding: 3rem 0; text-align: center; border-top: 1px solid var(--glass-border); margin-top: 5rem;">
+        <p style="color: var(--text-muted); font-size: 0.9rem;">&copy; 2026 Visual Novel Studio. Built with AI.</p>
+    </footer>
+</body>
+
 </html>

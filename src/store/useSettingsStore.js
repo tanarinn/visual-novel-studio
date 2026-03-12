@@ -12,11 +12,6 @@ export const TEXT_PROVIDERS = {
     baseUrl: 'https://api.anthropic.com/v1',
     models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
   },
-  gemini: {
-    name: 'Google Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    models: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'],
-  },
   groq: {
     name: 'Groq',
     baseUrl: 'https://api.groq.com/openai/v1',

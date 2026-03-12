@@ -246,7 +246,7 @@ ${textToSend}`
       max_tokens: provider === 'ollama' ? 8192 : 2000,
     }
     // json_object mode for providers that support it (reduces markdown wrapping)
-    if (['openai', 'gemini', 'groq'].includes(provider)) body.response_format = { type: 'json_object' }
+    if (['openai', 'groq'].includes(provider)) body.response_format = { type: 'json_object' }
     // Disable thinking mode for Ollama thinking models
     if (provider === 'ollama') body.think = false
 

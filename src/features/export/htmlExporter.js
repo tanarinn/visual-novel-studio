@@ -90,17 +90,29 @@ export function exportToHTML(project, readerSettings = {}) {
       z-index: 100;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
+      padding: 10px 20px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-left { display: flex; align-items: center; }
+    .header-right {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      justify-content: flex-end;
+      gap: 6px;
     }
 
     .header-title {
       font-size: 1.1em;
       font-weight: bold;
       margin: 0;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .toc-toggle {
@@ -112,7 +124,27 @@ export function exportToHTML(project, readerSettings = {}) {
       cursor: pointer;
       font-family: inherit;
       font-size: 0.85em;
+      white-space: nowrap;
     }
+
+    .hdr-share-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.72em;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s;
+      padding: 0;
+    }
+    .hdr-share-btn:hover { opacity: 0.65; }
+    @media (max-width: 480px) { .hdr-share-btn { display: none; } }
 
     /* Table of Contents */
     .toc-overlay {
@@ -232,14 +264,61 @@ export function exportToHTML(project, readerSettings = {}) {
       .main { padding: 24px 16px; }
       .scene-image { max-height: 400px; }
     }
+
+    /* Share section */
+    .share-section {
+      max-width: var(--text-width);
+      margin: 0 auto 80px;
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .share-section-heading {
+      font-size: 0.9em;
+      opacity: 0.6;
+      margin: 0 0 16px;
+    }
+    .share-buttons-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .share-big-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.88em;
+      font-weight: bold;
+      color: #fff;
+      transition: opacity 0.15s;
+    }
+    .share-big-btn:hover { opacity: 0.85; }
+    .btn-x    { background: #000; }
+    .btn-fb   { background: #1877F2; }
+    .btn-line { background: #06C755; }
+    .btn-copy { background: #6366f1; }
   </style>
 </head>
 <body>
   <div class="progress" id="progress"></div>
 
   <header class="header">
+    <div class="header-left">
+      <button class="toc-toggle" onclick="toggleToc()">目次</button>
+    </div>
     <h1 class="header-title">${escapeHtml(project.title)}</h1>
-    <button class="toc-toggle" onclick="toggleToc()">目次</button>
+    <div class="header-right">
+      <button class="hdr-share-btn" onclick="shareX()" title="Xでシェア">&#120143;</button>
+      <button class="hdr-share-btn" onclick="shareFB()" title="Facebookでシェア">FB</button>
+      <button class="hdr-share-btn" onclick="shareLine()" title="LINEでシェア">LINE</button>
+      <button class="hdr-share-btn" id="hdr-copy-btn" onclick="copyUrl('hdr')" title="URLをコピー">&#128279;</button>
+    </div>
   </header>
 
   <div class="toc-overlay" id="toc-overlay" onclick="closeToc()">
@@ -251,6 +330,15 @@ export function exportToHTML(project, readerSettings = {}) {
 
   <main class="main">
     ${scenesHTML}
+    <div class="share-section">
+      <p class="share-section-heading">この作品をシェアする</p>
+      <div class="share-buttons-row">
+        <button class="share-big-btn btn-x" onclick="shareX()">&#120143; Xでシェア</button>
+        <button class="share-big-btn btn-fb" onclick="shareFB()">f Facebookでシェア</button>
+        <button class="share-big-btn btn-line" onclick="shareLine()">LINE LINEでシェア</button>
+        <button class="share-big-btn btn-copy" id="main-copy-btn" onclick="copyUrl('main')">&#128279; URLをコピー</button>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -271,6 +359,33 @@ export function exportToHTML(project, readerSettings = {}) {
       const pct = total > 0 ? (scrolled / total) * 100 : 0;
       document.getElementById('progress').style.width = pct + '%';
     });
+
+    // Share
+    const PAGE_TITLE = ${JSON.stringify(project.title)};
+    function shareX() {
+      window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(PAGE_TITLE) + '&url=' + encodeURIComponent(location.href), '_blank');
+    }
+    function shareFB() {
+      window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(location.href), '_blank');
+    }
+    function shareLine() {
+      window.open('https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(location.href) + '&text=' + encodeURIComponent(PAGE_TITLE), '_blank');
+    }
+    function copyUrl(src) {
+      const btn = document.getElementById(src === 'hdr' ? 'hdr-copy-btn' : 'main-copy-btn');
+      const orig = btn.innerHTML;
+      const doCopy = () => {
+        if (navigator.clipboard) return navigator.clipboard.writeText(location.href);
+        const ta = document.createElement('textarea');
+        ta.value = location.href; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); return Promise.resolve();
+      };
+      doCopy().then(() => {
+        btn.textContent = '✓ コピー済み';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+      });
+    }
   </script>
 </body>
 </html>`

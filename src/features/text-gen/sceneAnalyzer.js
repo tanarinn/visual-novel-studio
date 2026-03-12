@@ -125,15 +125,23 @@ async function analyzeWithAnthropic({ userContent, baseUrl, apiKey, model }) {
 }
 
 function parseAnalysisResult(content) {
-  try {
-    // Extract JSON from response (handle markdown code blocks)
-    const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) ||
-                      content.match(/```\n?([\s\S]*?)\n?```/)
-    const jsonStr = jsonMatch ? jsonMatch[1] : content
-    return JSON.parse(jsonStr.trim())
-  } catch {
-    throw new Error('APIからのJSON解析に失敗しました: ' + content.slice(0, 200))
+  // Strategy 1: extract from markdown code block (```json ... ``` or ``` ... ```)
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1]) } catch {}
   }
+
+  // Strategy 2: direct parse (model returned raw JSON as instructed)
+  try { return JSON.parse(content.trim()) } catch {}
+
+  // Strategy 3: extract outermost { ... } braces (handles preamble/suffix text)
+  const start = content.indexOf('{')
+  const end = content.lastIndexOf('}')
+  if (start !== -1 && end > start) {
+    try { return JSON.parse(content.slice(start, end + 1)) } catch {}
+  }
+
+  throw new Error('APIからのJSON解析に失敗しました: ' + content.slice(0, 200))
 }
 
 /**
@@ -237,8 +245,8 @@ ${textToSend}`
       temperature: 0.3,
       max_tokens: provider === 'ollama' ? 8192 : 2000,
     }
-    // json_object mode only for OpenAI (not all providers support it)
-    if (provider === 'openai') body.response_format = { type: 'json_object' }
+    // json_object mode for providers that support it (reduces markdown wrapping)
+    if (['openai', 'gemini', 'groq'].includes(provider)) body.response_format = { type: 'json_object' }
     // Disable thinking mode for Ollama thinking models
     if (provider === 'ollama') body.think = false
 

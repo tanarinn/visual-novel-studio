@@ -14,13 +14,13 @@ export const TEXT_PROVIDERS = {
   },
   gemini: {
     name: 'Google Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    models: ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro'],
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    models: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'],
   },
   groq: {
     name: 'Groq',
     baseUrl: 'https://api.groq.com/openai/v1',
-    models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
+    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'llama3-70b-8192', 'gemma2-9b-it'],
   },
   ollama: {
     name: 'Ollama（ローカル）',

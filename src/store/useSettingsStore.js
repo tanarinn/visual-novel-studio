@@ -40,13 +40,23 @@ export const IMAGE_PROVIDERS = {
     baseUrl: 'https://api.openai.com/v1',
     models: ['dall-e-3', 'dall-e-2', 'gpt-image-1'],
   },
+  gemini: {
+    name: 'Google Gemini (Image)',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    models: ['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview', 'gemini-2.5-flash-image', 'imagen-3.0-generate-002', 'imagen-3.0-generate-001'],
+  },
   stability: {
     name: 'Stability AI',
     baseUrl: 'https://api.stability.ai/v1',
     models: ['stable-diffusion-xl-1024-v1-0'],
   },
+  a1111: {
+    name: 'ローカル (A1111 / Forge)',
+    baseUrl: 'http://127.0.0.1:7860',
+    models: [],
+  },
   custom: {
-    name: 'カスタム (A1111 / ComfyUI)',
+    name: 'カスタム (OpenAI互換など)',
     baseUrl: '',
     models: [],
   },

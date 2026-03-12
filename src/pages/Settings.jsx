@@ -111,6 +111,7 @@ export default function Settings() {
       provider,
       baseUrl: config.baseUrl || imageApi.baseUrl,
       model: config.models[0] || imageApi.model,
+      ...(provider === 'a1111' ? { apiKey: 'local' } : {}),
     })
   }
 
@@ -258,17 +259,25 @@ export default function Settings() {
           <Input
             value={imageApi.baseUrl}
             onChange={(v) => setImageApi({ baseUrl: v })}
-            placeholder="https://api.openai.com/v1"
+            placeholder={imageApi.provider === 'a1111' ? "http://127.0.0.1:7860" : "https://api.openai.com/v1"}
           />
         </FormRow>
-        <FormRow label="APIキー">
-          <Input
-            type="password"
-            value={imageApi.apiKey}
-            onChange={(v) => setImageApi({ apiKey: v })}
-            placeholder="sk-..."
-          />
-        </FormRow>
+        {imageApi.provider === 'a1111' ? (
+          <FormRow label="APIキー">
+            <div style={{ fontSize: '0.85em', color: '#16a34a', background: '#f0fdf4', padding: '10px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+              ✅ ローカル実行のためAPIキーは不要です
+            </div>
+          </FormRow>
+        ) : (
+          <FormRow label="APIキー">
+            <Input
+              type="password"
+              value={imageApi.apiKey}
+              onChange={(v) => setImageApi({ apiKey: v })}
+              placeholder="sk-..."
+            />
+          </FormRow>
+        )}
         <FormRow label="モデル">
           {imageApi.provider === 'custom' || imageModelOptions.length === 0 ? (
             <Input
@@ -286,15 +295,15 @@ export default function Settings() {
         </FormRow>
         <button
           onClick={handleTestImage}
-          disabled={testingImage || !imageApi.apiKey}
+          disabled={testingImage || (!imageApi.apiKey && imageApi.provider !== 'a1111')}
           style={{
             padding: '8px 20px',
             background: '#6366f1',
             color: '#fff',
             border: 'none',
             borderRadius: '8px',
-            cursor: testingImage || !imageApi.apiKey ? 'not-allowed' : 'pointer',
-            opacity: testingImage || !imageApi.apiKey ? 0.5 : 1,
+            cursor: testingImage || (!imageApi.apiKey && imageApi.provider !== 'a1111') ? 'not-allowed' : 'pointer',
+            opacity: testingImage || (!imageApi.apiKey && imageApi.provider !== 'a1111') ? 0.5 : 1,
             fontSize: '0.9em',
           }}
         >

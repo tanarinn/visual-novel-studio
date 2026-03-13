@@ -153,6 +153,41 @@ h1 {
   gap: 0.5rem;
 }
 
+/* Samples Slider (PC only) */
+@media (min-width: 769px) {
+  .samples-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 2rem;
+    gap: 2rem;
+    grid-template-columns: none; /* Override grid */
+  }
+
+  .samples-grid::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .samples-grid::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+  }
+
+  .samples-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+  }
+
+  .samples-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+  }
+
+  .sample-card {
+    flex: 0 0 400px;
+    scroll-snap-align: start;
+  }
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {
@@ -178,6 +213,8 @@ h1 {
   }
 
   .samples-grid {
+    display: grid;
     grid-template-columns: 1fr;
+    gap: 2rem;
   }
 }

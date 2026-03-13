@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { exportToHTML, downloadHTML } from '../features/export/htmlExporter'
+import { exportToHTML, exportToReaderHTML, downloadHTML, previewHTML } from '../features/export/htmlExporter'
 
 function ExportOption({ icon, title, description, badge, onClick, disabled }) {
   return (
@@ -37,21 +37,47 @@ function ExportOption({ icon, title, description, badge, onClick, disabled }) {
   )
 }
 
+function ModeCard({ mode, label, icon, description, selected, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1, padding: '16px', textAlign: 'left',
+        border: `2px solid ${selected ? '#6366f1' : '#e5e7eb'}`,
+        borderRadius: '12px',
+        background: selected ? '#eef2ff' : '#fff',
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+      }}
+    >
+      <div style={{ fontSize: '1.6em', marginBottom: '6px' }}>{icon}</div>
+      <div style={{ fontWeight: '700', color: selected ? '#4338ca' : '#1a1a2e', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '0.8em', color: '#6b7280', lineHeight: '1.4' }}>{description}</div>
+    </button>
+  )
+}
+
 export default function Export() {
   const navigate = useNavigate()
   const { project } = useProjectStore()
   const { readerSettings } = useSettingsStore()
   const [exporting, setExporting] = useState(false)
   const [exported, setExported] = useState(false)
+  const [exportMode, setExportMode] = useState('story')
 
   const imageCount = project.scenes?.filter((s) => s.image).length || 0
   const totalScenes = project.scenes?.length || 0
+
+  const buildHTML = () =>
+    exportMode === 'story'
+      ? exportToHTML(project, readerSettings)
+      : exportToReaderHTML(project, readerSettings)
 
   const handleExportHTML = async () => {
     if (!project.id) return
     setExporting(true)
     try {
-      const html = exportToHTML(project, readerSettings)
+      const html = buildHTML()
       const filename = `${project.title.replace(/[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g, '_') || 'novel'}.html`
       downloadHTML(html, filename)
       setExported(true)
@@ -59,6 +85,15 @@ export default function Export() {
       alert('エクスポートに失敗しました: ' + e.message)
     } finally {
       setExporting(false)
+    }
+  }
+
+  const handlePreviewHTML = () => {
+    if (!project.id) return
+    try {
+      previewHTML(buildHTML())
+    } catch (e) {
+      alert('プレビューに失敗しました: ' + e.message)
     }
   }
 
@@ -116,6 +151,27 @@ export default function Export() {
         </div>
       </div>
 
+      {/* HTML output mode selector */}
+      <h2 style={{ fontSize: '1em', fontWeight: '700', color: '#374151', marginBottom: '12px' }}>出力スタイル</h2>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <ModeCard
+          mode="story"
+          label="ストーリーモード"
+          icon="🎬"
+          description="フルスクリーン・ビジュアルノベルスタイル"
+          selected={exportMode === 'story'}
+          onClick={() => setExportMode('story')}
+        />
+        <ModeCard
+          mode="reader"
+          label="リーダーモード"
+          icon="📖"
+          description="アプリ内リーダーと同じシンプルレイアウト"
+          selected={exportMode === 'reader'}
+          onClick={() => setExportMode('reader')}
+        />
+      </div>
+
       {/* Main export */}
       <h2 style={{ fontSize: '1em', fontWeight: '700', color: '#374151', marginBottom: '12px' }}>メイン出力</h2>
 
@@ -123,7 +179,9 @@ export default function Export() {
         icon="🌐"
         title="HTMLファイルとして保存"
         badge="推奨"
-        description={`挿絵をbase64で埋め込んだスタンドアロンHTML。オフラインでも閲覧可能。現在の表示設定（フォント・カラーテーマ等）が適用されます。`}
+        description={exportMode === 'story'
+          ? 'VNスタイル・SNSシェアボタン付きスタンドアロンHTML。'
+          : 'リーダーと同じシンプルレイアウト・フォント/テーマ設定を反映したスタンドアロンHTML。'}
         onClick={handleExportHTML}
         disabled={exporting}
       />
@@ -164,18 +222,32 @@ export default function Export() {
         disabled={false}
       />
 
-      {/* Preview button */}
-      <div style={{ marginTop: '32px', textAlign: 'center' }}>
+      {/* Preview buttons */}
+      <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button
           onClick={() => navigate('/reader')}
           style={{
-            padding: '12px 32px',
+            padding: '12px 28px',
             background: '#6366f1', color: '#fff',
             border: 'none', borderRadius: '10px',
-            cursor: 'pointer', fontSize: '1em', fontWeight: '600',
+            cursor: 'pointer', fontSize: '0.95em', fontWeight: '600',
           }}
         >
-          📖 プレビューを確認
+          📖 アプリ内プレビュー
+        </button>
+        <button
+          onClick={handlePreviewHTML}
+          disabled={!project.id}
+          style={{
+            padding: '12px 28px',
+            background: '#0f172a', color: '#fff',
+            border: 'none', borderRadius: '10px',
+            cursor: project.id ? 'pointer' : 'not-allowed',
+            fontSize: '0.95em', fontWeight: '600',
+            opacity: project.id ? 1 : 0.5,
+          }}
+        >
+          🌐 HTMLプレビュー（新しいタブ）
         </button>
       </div>
 
@@ -184,7 +256,8 @@ export default function Export() {
         <h3 style={{ margin: '0 0 8px', fontSize: '0.9em', color: '#374151' }}>💡 ヒント</h3>
         <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85em', color: '#6b7280', lineHeight: '1.8' }}>
           <li>HTMLファイルは挿絵がbase64で埋め込まれるため、単一ファイルで完結します</li>
-          <li>リーダー設定（フォントサイズ・カラーテーマ等）はHTMLに反映されます</li>
+          <li>ストーリーモードはビジュアルノベルスタイルの演出・SNSシェア機能付き</li>
+          <li>リーダーモードはフォント・カラーテーマなど現在の表示設定が反映されます</li>
           <li>エクスポート前に📖リーダーでプレビューすることをおすすめします</li>
         </ul>
       </div>
